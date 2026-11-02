@@ -64,7 +64,7 @@ SPACE_CSS = """
 [data-testid="stAppDeployButton"], .stAppDeployButton { display: none; }
 [data-testid="stMainBlockContainer"] {
   position: relative; z-index: 1;
-  background: rgba(9, 10, 25, 0.62); border-radius: 16px; padding: 2rem 2.5rem 6rem; margin-top: 1rem; margin-bottom: 1rem;
+  background: rgba(9, 10, 25, 0.62); border-radius: 16px; padding: 5rem 2.5rem 6rem; margin-top: 1rem; margin-bottom: 1rem;
 }
 @keyframes space-drift { from { background-position: 0 0; } to { background-position: -360px 340px; } }
 @keyframes space-twinkle { from { opacity: 0.75; } to { opacity: 1; } }
@@ -96,7 +96,7 @@ PLAYER_HTML = """
     document.head.appendChild(style);
   }
   style.textContent = [
-    "#bh-player { position: fixed; top: 8px; left: 50%; margin-left: -28px; z-index: 1000000; width: 56px; height: 56px; padding: 0;",
+    "#bh-player { position: absolute; top: 12px; left: 50%; margin-left: -28px; z-index: 1000000; width: 56px; height: 56px; padding: 0;",
     "  border: 0; border-radius: 50%; background: transparent; cursor: pointer; }",
     "#bh-player.missing { opacity: 0.4; cursor: not-allowed; }",
     "#bh-player .bh { position: relative; width: 100%; height: 100%; transform: rotate(32deg); }",
@@ -170,7 +170,9 @@ PLAYER_HTML = """
   });
   audio.addEventListener("play", sync); audio.addEventListener("pause", sync);
   sync();
-  document.body.appendChild(btn);
+  // Sit inside the scrolling content panel, so the player scrolls away with the page instead of covering text.
+  var host = document.querySelector('[data-testid="stMainBlockContainer"]') || document.body;
+  host.appendChild(btn);
   } catch (e) { console.error("black-hole player failed:", e); }
 })();
 </script>
@@ -414,11 +416,11 @@ def main_menu() -> None:
         "actual outcomes. It does not say what causes either outcome."
     )
 
-    # The button is fixed to the top left of the screen, so it never covers text when scrolling, with dark text on a light fill so the label is readable.
+    # The button sits at the top left of the page and scrolls away with it, so it never covers text, with dark text on a light fill so the label is readable.
     st.markdown(
         """
 <style>
-.st-key-explore { position: fixed; left: 0; top: 14px; z-index: 1000000; width: auto; }
+.st-key-explore { position: absolute; left: 1rem; top: 14px; z-index: 1000000; width: auto; }
 .st-key-explore button { background: #8fb0ff; border: 0; border-radius: 0 14px 14px 0; padding: 0.9rem 1.1rem;
   box-shadow: 0 0 18px rgba(124, 156, 255, 0.55); }
 .st-key-explore button, .st-key-explore button p, .st-key-explore button div { color: #0b0b1a !important; font-weight: 700; }
