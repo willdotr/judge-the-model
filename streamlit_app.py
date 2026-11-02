@@ -62,7 +62,6 @@ SPACE_CSS = """
 [data-testid="stHeader"] { background: transparent; }
 [data-testid="stVegaLiteChart"], [data-testid="stVegaLiteChart"] canvas, [data-testid="stVegaLiteChart"] svg { background: transparent !important; }
 [data-testid="stAppDeployButton"], .stAppDeployButton { display: none; }
-[data-testid="stHeader"], [data-testid="stSidebar"] { z-index: 1; }
 [data-testid="stMainBlockContainer"] {
   position: relative; z-index: 1;
   background: rgba(9, 10, 25, 0.62); border-radius: 16px; padding: 2rem 2.5rem 6rem; margin-top: 1rem; margin-bottom: 1rem;
@@ -97,7 +96,7 @@ PLAYER_HTML = """
     document.head.appendChild(style);
   }
   style.textContent = [
-    "#bh-player { position: fixed; top: 8px; right: 76px; z-index: 1000; width: 56px; height: 56px; padding: 0;",
+    "#bh-player { position: fixed; top: 8px; left: 50%; margin-left: -28px; z-index: 1000000; width: 56px; height: 56px; padding: 0;",
     "  border: 0; border-radius: 50%; background: transparent; cursor: pointer; }",
     "#bh-player.missing { opacity: 0.4; cursor: not-allowed; }",
     "#bh-player .bh { position: relative; width: 100%; height: 100%; transform: rotate(32deg); }",
@@ -398,7 +397,7 @@ def main_menu() -> None:
     st.markdown(
         """
 <style>
-.st-key-explore { position: fixed; left: 0; top: 14px; z-index: 1000; width: auto; }
+.st-key-explore { position: fixed; left: 0; top: 14px; z-index: 1000000; width: auto; }
 .st-key-explore button { background: #8fb0ff; border: 0; border-radius: 0 14px 14px 0; padding: 0.9rem 1.1rem;
   box-shadow: 0 0 18px rgba(124, 156, 255, 0.55); }
 .st-key-explore button, .st-key-explore button p, .st-key-explore button div { color: #0b0b1a !important; font-weight: 700; }
