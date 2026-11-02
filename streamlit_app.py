@@ -5,6 +5,8 @@ Build each section up to its required minimum (see the activity website). Keep e
 coming from m11.py, and label every table and plot "Training" or "Test".
 """
 
+from pathlib import Path
+
 import altair as alt
 import pandas as pd
 import streamlit as st
@@ -16,6 +18,145 @@ TEST = "Test"
 SECTIONS = ["1. Beyond Accuracy", "2. A Threshold for the Job", "3. Training vs. Test"]
 
 st.set_page_config(page_title="Judge the Model", layout="wide")
+
+# Space theme: a drifting, twinkling starfield and a floating planet behind the page. Decoration only:
+# content sits on a semi-transparent dark panel so text and tables stay readable, and the motion stops
+# for people who ask their system for reduced motion. (The dark theme itself is set in .streamlit/config.toml.)
+SPACE_CSS = """
+<style>
+.stApp { background: radial-gradient(ellipse at bottom, #1b2447 0%, #0a0c1c 55%, #05060d 100%); }
+.stApp::before, .stApp::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.9)); }
+.stApp::before {
+  background-image:
+    radial-gradient(1.8px 1.8px at 20px 30px, #fff, transparent),
+    radial-gradient(2.4px 2.4px at 90px 140px, #cfd8ff, transparent),
+    radial-gradient(1.8px 1.8px at 160px 70px, #fff, transparent),
+    radial-gradient(1.8px 1.8px at 230px 210px, #ffe9c4, transparent),
+    radial-gradient(2.4px 2.4px at 300px 120px, #fff, transparent),
+    radial-gradient(1.8px 1.8px at 60px 260px, #cfd8ff, transparent),
+    radial-gradient(1.8px 1.8px at 340px 300px, #fff, transparent);
+  background-size: 360px 340px;
+  animation: space-drift 110s linear infinite;
+}
+.stApp::after {
+  background-image:
+    radial-gradient(3px 3px at 50px 80px, #fff, transparent),
+    radial-gradient(3px 3px at 210px 40px, #bcd0ff, transparent),
+    radial-gradient(3.6px 3.6px at 400px 260px, #fff, transparent),
+    radial-gradient(3px 3px at 120px 330px, #ffe9c4, transparent);
+  background-size: 520px 420px;
+  animation: space-drift 60s linear infinite, space-twinkle 4s ease-in-out infinite alternate;
+}
+.space-planet {
+  position: fixed; right: 4vw; bottom: 8vh; width: 110px; height: 110px; border-radius: 50%;
+  pointer-events: none; z-index: 0; opacity: 0.55;
+  background: radial-gradient(circle at 30% 30%, #ffd6a5, #c9743a 55%, #5a2a14 100%);
+  box-shadow: 0 0 40px rgba(255, 170, 90, 0.35);
+  animation: space-float 12s ease-in-out infinite alternate;
+}
+.space-planet::after {
+  content: ""; position: absolute; left: -35%; top: 42%; width: 170%; height: 16%;
+  border: 2px solid rgba(255, 220, 170, 0.55); border-radius: 50%; transform: rotate(-18deg);
+}
+[data-testid="stHeader"] { background: transparent; }
+[data-testid="stVegaLiteChart"], [data-testid="stVegaLiteChart"] canvas, [data-testid="stVegaLiteChart"] svg { background: transparent !important; }
+[data-testid="stAppDeployButton"], .stAppDeployButton { display: none; }
+[data-testid="stHeader"], [data-testid="stSidebar"] { z-index: 1; }
+[data-testid="stMainBlockContainer"] {
+  position: relative; z-index: 1;
+  background: rgba(9, 10, 25, 0.62); border-radius: 16px; padding: 2rem 2.5rem 6rem; margin-top: 1rem; margin-bottom: 1rem;
+}
+@keyframes space-drift { from { background-position: 0 0; } to { background-position: -360px 340px; } }
+@keyframes space-twinkle { from { opacity: 0.75; } to { opacity: 1; } }
+@keyframes space-float { from { transform: translateY(0); } to { transform: translateY(-18px); } }
+@media (prefers-reduced-motion: reduce) {
+  .stApp::before, .stApp::after, .space-planet { animation: none; }
+}
+</style>
+<div class="space-planet" aria-hidden="true"></div>
+"""
+SPACE_THEME = True  # set to False to switch the space background off
+if SPACE_THEME:
+    st.markdown(SPACE_CSS, unsafe_allow_html=True)
+
+# Music player: a black-hole button fixed at the top right. Click it to play or pause; it spins while the
+# music plays. Put your song at static/music.mp3 (served by enableStaticServing in .streamlit/config.toml).
+# The player is created once and kept in the page, so the music keeps playing when you change section.
+MUSIC_PLAYER = True  # set to False to remove the player
+MUSIC_FILE = Path(__file__).resolve().parent / "static" / "music.mp3"
+PLAYER_HTML = """
+<script>
+(function () {
+  // The player adds its own stylesheet from script, because the page's HTML cleaner removes style blocks.
+  try {
+  var style = document.getElementById("bh-style");
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "bh-style";
+    document.head.appendChild(style);
+  }
+  style.textContent = [
+    "#bh-player { position: fixed; top: 8px; right: 76px; z-index: 1000; width: 56px; height: 56px; padding: 0;",
+    "  border: 0; border-radius: 50%; background: transparent; cursor: pointer; }",
+    "#bh-player.missing { opacity: 0.4; cursor: not-allowed; }",
+    "#bh-player .bh { position: relative; width: 100%; height: 100%; transform: rotate(32deg); }",
+    "#bh-player .pl-ring { position: absolute; left: 0; top: 0; width: 100%; height: 100%; border-radius: 50%;",
+    "  box-sizing: border-box; border: 3px solid rgba(214, 240, 244, 0.8);",
+    "  box-shadow: inset 0 0 0 2px rgba(150, 200, 210, 0.35); transform: rotate(-78deg) scaleY(0.26); }",
+    "#bh-player .pl-ring-front { clip-path: inset(50% 0 0 0); }",
+    "#bh-player .pl-body { position: absolute; left: 22%; top: 22%; width: 56%; height: 56%; border-radius: 50%;",
+    "  overflow: hidden; background: #8fdde6; box-shadow: 0 0 10px 1px rgba(130, 225, 238, 0.55); }",
+    "#bh-player .pl-bands { position: absolute; left: 0; top: 0; width: 100%; height: 100%;",
+    "  background: repeating-linear-gradient(90deg, #b9f3f6 0, #b9f3f6 5px, #79d3de 5px, #79d3de 7px, #a3ebf0 7px, #a3ebf0 12px);",
+    "  background-size: 12px 100%; }",
+    "#bh-player .pl-shade { position: absolute; left: 0; top: 0; width: 100%; height: 100%; border-radius: 50%;",
+    "  background: radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 38%, rgba(8, 40, 60, 0.55) 100%); }",
+    "#bh-player.playing .pl-bands { animation: pl-spin 1.6s linear infinite; }",
+    "#bh-player.playing .pl-body { box-shadow: 0 0 16px 3px rgba(150, 235, 245, 0.85); }",
+    "#bh-player:focus-visible { outline: 2px solid #7c9cff; outline-offset: 3px; }",
+    "@keyframes pl-spin { from { background-position: 0 0; } to { background-position: 12px 0; } }",
+    "@media (prefers-reduced-motion: reduce) { #bh-player.playing .pl-bands { animation: none; } }"
+  ].join("\\n");
+  if (document.getElementById("bh-player")) return;
+  var hasFile = "__HAS_FILE__" === "yes";
+  var btn = document.createElement("button");
+  btn.id = "bh-player"; btn.type = "button";
+  function part(parent, cls) {
+    var el = document.createElement("div");
+    el.className = cls;
+    parent.appendChild(el);
+    return el;
+  }
+  var bh = part(btn, "bh");
+  part(bh, "pl-ring pl-ring-back");
+  var body = part(bh, "pl-body");
+  part(body, "pl-bands");
+  part(body, "pl-shade");
+  part(bh, "pl-ring pl-ring-front");
+  var audio = new Audio("/app/static/music.mp3");
+  audio.loop = true; audio.volume = 0.5;
+  function sync() {
+    var on = !audio.paused;
+    btn.classList.toggle("playing", on);
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    var label = !hasFile ? "Music file not added yet" : (on ? "Pause music" : "Play music");
+    btn.title = label; btn.setAttribute("aria-label", label);
+  }
+  if (!hasFile) btn.classList.add("missing");
+  btn.addEventListener("click", function () {
+    if (!hasFile) return;
+    if (audio.paused) { audio.play().catch(function () {}); } else { audio.pause(); }
+  });
+  audio.addEventListener("play", sync); audio.addEventListener("pause", sync);
+  sync();
+  document.body.appendChild(btn);
+  } catch (e) { console.error("black-hole player failed:", e); }
+})();
+</script>
+"""
+if MUSIC_PLAYER:
+    st.html(PLAYER_HTML.replace("__HAS_FILE__", "yes" if MUSIC_FILE.exists() else "no"), unsafe_allow_javascript=True)
 
 
 @st.cache_data
@@ -179,7 +320,8 @@ def train_vs_test(res: dict, model: str) -> None:
     values = base.mark_text(dy=-7, fontSize=11).encode(text=alt.Text("AUROC:Q", format=".3f"))
     chance = alt.Chart(pd.DataFrame({"y": [0.5]})).mark_rule(strokeDash=[6, 4], strokeWidth=2.5, color="#d03b3b", opacity=1).encode(y="y:Q")
     st.caption(f"{TRAIN} and {TEST} AUROC for every model · red dashed line = 0.5, the same as ranking no better than chance")
-    st.altair_chart(bars + values + chance, width="stretch")
+    chart = (bars + values + chance).configure(background="rgba(0,0,0,0)").configure_view(fill=None, stroke=None)
+    st.altair_chart(chart, width="stretch")
 
     rows = [{"Model": m11.MODEL_LABEL[m], f"{TRAIN} AUROC": m11.fmt_num(v["train"]), f"{TEST} AUROC": m11.fmt_num(v["test"]),
              f"Gap ({TRAIN.lower()} − {TEST.lower()})": m11.fmt_num(v["gap"])} for m, v in s.items()]
@@ -191,6 +333,92 @@ def train_vs_test(res: dict, model: str) -> None:
 
 
 RENDER = dict(zip(SECTIONS, [beyond_accuracy, threshold, train_vs_test]))
+
+
+# ---- Main menu: the first page anyone sees --------------------------------------
+JOBS = {
+    "readmission": "Predict readmission within 30 days, at discharge.",
+    "diabetes": "Flag adults for follow-up testing; finding positives matters most.",
+}
+SECTION_INFO = {
+    SECTIONS[0]: "Name the positive class, see why accuracy alone can mislead, read a confusion matrix as four groups of "
+                 "patients, and compare every model at a threshold of 0.50.",
+    SECTIONS[1]: "See that the threshold is a decision separate from the model, and what moving it gains and gives up "
+                 "compared with 0.50.",
+    SECTIONS[2]: "See why a model is judged on patients it never saw, and spot a model that memorised its training patients.",
+}
+
+
+def main_menu() -> None:
+    st.markdown(
+        "<div style='text-align:center; padding: 1.5rem 0 0.5rem'>"
+        "<h1 style='font-size:3rem; margin:0'>Classification Activity</h1>"
+        "<p style='font-size:1.2rem; margin:0.4rem 0 0; opacity:0.85'>Generated by Willie Robinson</p></div>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        "<p style='text-align:center; font-size:1.05rem'>Which classifier would you trust for this job, "
+        "at what threshold, and with what limits?</p>",
+        unsafe_allow_html=True,
+    )
+    st.write(
+        "This app helps a clinical lead judge whether a prediction model is fit for a job. It compares a "
+        "prevalence baseline with four classifiers (logistic regression, k-nearest neighbours, random forest and "
+        "gradient boosting) on two health datasets. Every number comes from results exported by the Python analysis, "
+        "and the app never retrains a model."
+    )
+
+    st.subheader("The two jobs")
+    cols = st.columns(2)
+    for col, k in zip(cols, m11.DATASETS):
+        r = load(k)
+        with col, st.container(border=True):
+            st.markdown(f"**{m11.DATASET_LABEL[k]}**")
+            st.write(JOBS[k])
+            st.caption(f"Positive class: {GROUPS[k]['pos'].lower()}.")
+            if r:
+                st.caption(f"{r['train']['n']:,} {TRAIN.lower()} patients and {r['test']['n']:,} {TEST.lower()} patients.")
+
+    st.subheader("The three sections")
+    for s in SECTIONS:
+        st.markdown(f"**{s}.** {SECTION_INFO[s]}")
+
+    st.subheader("How to read it")
+    st.markdown(
+        f"- **{TRAIN} or {TEST}:** every table and chart says which it is. A model learns from the {TRAIN.lower()} "
+        f"patients, so {TRAIN.lower()} results flatter it. Only {TEST.lower()} results, on patients the model never "
+        "saw, show what to expect on new patients.\n"
+        "- **AUROC** is about ranking: how often a patient who had the outcome gets a higher probability than one "
+        "who did not. It is not accuracy, and it does not choose a threshold.\n"
+        "- **Associations, not causes:** the app shows what the models flagged and how that compared with the "
+        "actual outcomes. It does not say what causes either outcome."
+    )
+
+    # The button is fixed to the top left of the screen, so it never covers text when scrolling, with dark text on a light fill so the label is readable.
+    st.markdown(
+        """
+<style>
+.st-key-explore { position: fixed; left: 0; top: 14px; z-index: 1000; width: auto; }
+.st-key-explore button { background: #8fb0ff; border: 0; border-radius: 0 14px 14px 0; padding: 0.9rem 1.1rem;
+  box-shadow: 0 0 18px rgba(124, 156, 255, 0.55); }
+.st-key-explore button, .st-key-explore button p, .st-key-explore button div { color: #0b0b1a !important; font-weight: 700; }
+.st-key-explore button:hover { background: #b5ccff; }
+</style>
+""",
+        unsafe_allow_html=True,
+    )
+    if st.button("Click here to explore", key="explore", type="primary"):
+        st.session_state.page = "app"
+        st.rerun()
+
+
+if st.session_state.get("page", "menu") == "menu":
+    main_menu()
+    st.stop()
+
+if st.sidebar.button("← Main menu", width="stretch"):
+    st.session_state.page = "menu"
+    st.rerun()
 
 st.title("Judge the Model")
 st.caption("Which classifier would you trust for this job, at what threshold, and with what limits?")
