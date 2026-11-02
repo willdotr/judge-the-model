@@ -1,11 +1,11 @@
 {
-  "exported_at": null,
-  "words": 0,
+  "exported_at": "2026-11-02T20:29:16Z",
+  "words": 80,
   "word_limit": 150,
   "sections": {
     "before_results": {
-      "readmission": "",
-      "diabetes": ""
+      "readmission": "A missed positive matters more because a patient who will be readmitted gets no extra support, like a follow up call, and may return to hospital unprepared. A false alarm on the other hand costs some time and a call to a patient who didn't even need it.",
+      "diabetes": "Once again a missed positive matters more. An adult with diabetes who isn't flagged goes untested and untreated. A false alarm only means a test that came back negative which is cheap."
     },
     "recommendations": {
       "readmission": "",
@@ -17,7 +17,7 @@
     }
   },
   "complete": {
-    "before_results": false,
+    "before_results": true,
     "recommendations": false,
     "design": false
   },
