@@ -7,8 +7,8 @@
 
 ## Before results
 For each dataset: positive class; which error matters more for the job (missed positive or false alarm) and why.
-- readmission:
-- diabetes:
+- readmission: A missed positive matters more because a patient who will be readmitted gets no extra support, like a follow up call, and may return to hospital unprepared. A false alarm on the other hand costs some time and a call to a patient who didn't even need it.
+- diabetes: Once again a missed positive matters more. An adult with diabetes who isn't flagged goes untested and untreated. A false alarm only means a test that came back negative which is cheap.
 
 ## Recommendations
 - readmission: <model and threshold, or "none is adequate for this job"> because ...
