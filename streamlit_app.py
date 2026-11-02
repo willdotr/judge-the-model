@@ -133,19 +133,40 @@ PLAYER_HTML = """
   part(body, "pl-bands");
   part(body, "pl-shade");
   part(bh, "pl-ring pl-ring-front");
-  var audio = new Audio("/app/static/music.mp3");
+  // Try the app's own static folder first; if the host does not serve it, fall back to the same file on GitHub.
+  var sources = [
+    "/app/static/music.mp3",
+    "https://raw.githubusercontent.com/willdotr/judge-the-model/main/static/music.mp3"
+  ];
+  var which = 0;
+  var failed = false;
+  var audio = new Audio(sources[0]);
   audio.loop = true; audio.volume = 0.5;
+  audio.addEventListener("error", function () {
+    console.error("black-hole player: could not load " + sources[which]);
+    if (which + 1 === sources.length) {
+      failed = true;
+      sync();
+      return;
+    }
+    which += 1;
+    audio.src = sources[which];
+    audio.load();
+    audio.play().catch(function () {});
+  });
   function sync() {
     var on = !audio.paused;
     btn.classList.toggle("playing", on);
     btn.setAttribute("aria-pressed", on ? "true" : "false");
-    var label = !hasFile ? "Music file not added yet" : (on ? "Pause music" : "Play music");
+    var label = !hasFile ? "Music file not added yet" : (failed ? "Music could not be loaded" : (on ? "Pause music" : "Play music"));
     btn.title = label; btn.setAttribute("aria-label", label);
   }
   if (!hasFile) btn.classList.add("missing");
   btn.addEventListener("click", function () {
     if (!hasFile) return;
-    if (audio.paused) { audio.play().catch(function () {}); } else { audio.pause(); }
+    if (audio.paused) {
+      audio.play().catch(function (e) { console.error("black-hole player: play() was refused:", e); });
+    } else { audio.pause(); }
   });
   audio.addEventListener("play", sync); audio.addEventListener("pause", sync);
   sync();
